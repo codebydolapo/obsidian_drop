@@ -1,0 +1,278 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { getOrCreateProfile, Profile } from './identity';
+import { Radar } from './components/Radar';
+import { HandshakeModal } from './components/HandshakeModal';
+import { TransientChat } from './components/TransientChat';
+import { deriveChatKey, generateKeyPair, isCryptoAvailable, safetyCode } from './lib/crypto';
+import { parseVenue, sanitizeVenueInput, setVenueInUrl } from './lib/venue';
+
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+const NO_CRYPTO_NOTICE = 'Encrypted chat needs HTTPS (or localhost).';
+
+type Peer = { socketId: string; name: string; avatar: string };
+
+export default function Home() {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [peers, setPeers] = useState<Peer[]>([]);
+
+  // Venue State
+  const [venue, setVenue] = useState<string | null>(null);
+  const [venueInput, setVenueInput] = useState('');
+  const venueRef = useRef<string | null>(null); // read by the reconnect handler
+
+  // Handshake State
+  const [incomingRequest, setIncomingRequest] = useState<{
+    fromSocketId: string;
+    senderProfile: Profile;
+  } | null>(null);
+  const [outgoingRequest, setOutgoingRequest] = useState<Peer | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Our key pair for each handshake in progress, by peer socket id
+  const keyPairsRef = useRef(new Map<string, { keyPair: CryptoKeyPair; publicKey: string }>());
+
+  // Active Chat State
+  const [activeChat, setActiveChat] = useState<{
+    roomId: string;
+    peerProfile: Profile;
+    chatKey: CryptoKey;
+    myPublicKey: string;
+    peerPublicKey: string;
+    safetyCode: string;
+  } | null>(null);
+
+  useEffect(() => {
+    // 1. Initialize identity from LocalStorage, venue from ?venue=
+    const userProfile = getOrCreateProfile();
+    setProfile(userProfile);
+    const initialVenue = parseVenue(new URLSearchParams(window.location.search).get('venue'));
+    venueRef.current = initialVenue;
+    setVenue(initialVenue);
+
+    // 2. Connect to Socket Server
+    const socketInstance = io(SOCKET_SERVER_URL);
+    setSocket(socketInstance);
+    const keyPairs = keyPairsRef.current;
+
+    socketInstance.on('connect', () => {
+      socketInstance.emit('join_radar', { ...userProfile, venue: venueRef.current });
+    });
+
+    // Handle online peers update
+    socketInstance.on('radar_update', (updatedPeers: Peer[]) => {
+      // Filter out self from radar
+      setPeers(updatedPeers.filter((p) => p.socketId !== socketInstance.id));
+
+      // Drop pending requests involving peers who went offline
+      const isOnline = (socketId: string) => updatedPeers.some((p) => p.socketId === socketId);
+      setIncomingRequest((req) => (req && !isOnline(req.fromSocketId) ? null : req));
+      setOutgoingRequest((req) => (req && !isOnline(req.socketId) ? null : req));
+    });
+
+    // Handle incoming chat request
+    socketInstance.on('receive_request', ({ fromSocketId, senderProfile }) => {
+      setIncomingRequest({ fromSocketId, senderProfile });
+    });
+
+    socketInstance.on('request_declined', ({ byProfile }: { byProfile: Profile }) => {
+      setOutgoingRequest(null);
+      setNotice(`${byProfile.name} declined your request`);
+    });
+
+    // Server cancels requests nobody answered within 30s
+    socketInstance.on('request_expired', ({ fromSocketId, targetSocketId }: { fromSocketId?: string; targetSocketId?: string }) => {
+      if (fromSocketId) {
+        setIncomingRequest((req) => (req?.fromSocketId === fromSocketId ? null : req));
+      } else if (targetSocketId) {
+        keyPairs.delete(targetSocketId);
+        setOutgoingRequest(null);
+        setNotice('Request expired. No response.');
+      }
+    });
+
+    socketInstance.on('rate_limited', () => {
+      setNotice('Slow down a little and try again.');
+    });
+
+    // Handle accepted chat session: derive the shared key from the peer's public key
+    socketInstance.on('chat_started', async ({ roomId, peerSocketId, peerProfile, peerPublicKey }) => {
+      setOutgoingRequest(null);
+      const own = keyPairs.get(peerSocketId);
+      if (!own) return;
+      keyPairs.delete(peerSocketId);
+
+      try {
+        const chatKey = await deriveChatKey(own.keyPair.privateKey, peerPublicKey);
+        const code = await safetyCode(own.publicKey, peerPublicKey);
+        setActiveChat({ roomId, peerProfile, chatKey, myPublicKey: own.publicKey, peerPublicKey, safetyCode: code });
+      } catch {
+        // Invalid peer key: close the room rather than chat unencrypted
+        socketInstance.emit('leave_chat', { roomId });
+        setNotice('Could not set up an encrypted chat.');
+      }
+    });
+
+    return () => {
+      socketInstance.disconnect();
+      keyPairs.clear();
+    };
+  }, []);
+
+  // Auto-dismiss notices
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  // Join a venue, or pass null to go back to the whole network
+  const applyVenue = (next: string | null) => {
+    venueRef.current = next;
+    setVenue(next);
+    setVenueInUrl(next);
+    setVenueInput('');
+    if (socket && profile) socket.emit('join_radar', { ...profile, venue: next });
+  };
+
+  const handleVenueSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const next = parseVenue(venueInput);
+    if (next) applyVenue(next);
+  };
+
+  // Request chat with selected radar peer
+  const handleSelectPeer = async (peer: Peer) => {
+    if (!socket) return;
+    if (!isCryptoAvailable()) {
+      setNotice(NO_CRYPTO_NOTICE);
+      return;
+    }
+    const own = await generateKeyPair();
+    keyPairsRef.current.set(peer.socketId, own);
+    // Server attaches our profile from its own record
+    socket.emit('send_request', { targetSocketId: peer.socketId, publicKey: own.publicKey });
+    setOutgoingRequest(peer);
+    setNotice(null);
+  };
+
+  // Accept incoming chat request
+  const handleAcceptRequest = async (fromSocketId: string) => {
+    if (!socket) return;
+    setIncomingRequest(null);
+    if (!isCryptoAvailable()) {
+      setNotice(NO_CRYPTO_NOTICE);
+      return;
+    }
+    const own = await generateKeyPair();
+    keyPairsRef.current.set(fromSocketId, own);
+    // The server replies with chat_started, which opens the chat
+    socket.emit('accept_request', { targetSocketId: fromSocketId, publicKey: own.publicKey });
+  };
+
+  // Decline request
+  const handleDeclineRequest = () => {
+    if (socket && incomingRequest) {
+      socket.emit('decline_request', { targetSocketId: incomingRequest.fromSocketId });
+    }
+    setIncomingRequest(null);
+  };
+
+  // Close chat for both sides
+  const handleCloseChat = () => {
+    if (socket && activeChat) {
+      socket.emit('leave_chat', { roomId: activeChat.roomId });
+    }
+    setActiveChat(null);
+  };
+
+  if (!profile) return null;
+
+  const where = venue ? `in #${venue}` : 'on your network';
+
+  return (
+    <main className="relative flex min-h-screen flex-col items-center justify-between bg-slate-950 p-6 text-slate-100 overflow-hidden">
+      {/* Header Badge */}
+      <header className="z-10 flex items-center justify-between w-full max-w-md border-b border-slate-800 pb-4">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+          <span className="font-mono text-xs uppercase tracking-widest text-emerald-400">Obsidian Drop</span>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1">
+          <span className="text-base">{profile.avatar}</span>
+          <span className="text-xs font-mono text-slate-300">{profile.name}</span>
+        </div>
+      </header>
+
+      {/* Center Radar Screen */}
+      <div className="flex flex-col items-center justify-center flex-1 my-8">
+        <Radar peers={peers} onSelectPeer={handleSelectPeer} />
+        <p className="mt-6 text-xs font-mono text-slate-500">
+          {notice ??
+            (outgoingRequest
+              ? `Waiting for ${outgoingRequest.name} to accept...`
+              : peers.length === 0
+                ? `Scanning for peers ${where}...`
+                : `${peers.length} active peer(s) ${where}`)}
+        </p>
+
+        {/* Venue code: narrows the radar when many people share one network */}
+        {venue ? (
+          <div className="mt-4 flex items-center gap-2 font-mono text-xs">
+            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+              #{venue}
+            </span>
+            <button
+              onClick={() => applyVenue(null)}
+              className="rounded-full px-3 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
+            >
+              Leave venue
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleVenueSubmit} className="mt-4 flex items-center gap-2">
+            <input
+              type="text"
+              value={venueInput}
+              onChange={(e) => setVenueInput(sanitizeVenueInput(e.target.value))}
+              placeholder="Venue code (optional)"
+              aria-label="Venue code"
+              className="w-44 rounded-full border border-slate-800 bg-slate-900 px-4 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={!venueInput}
+              className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-medium text-slate-950 transition hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500"
+            >
+              Join
+            </button>
+          </form>
+        )}
+      </div>
+
+      {/* Handshake Request Modal */}
+      <HandshakeModal
+        request={incomingRequest}
+        onAccept={handleAcceptRequest}
+        onDecline={handleDeclineRequest}
+      />
+
+      {/* Active Transient Chat UI */}
+      {activeChat && socket && (
+        <TransientChat
+          socket={socket}
+          roomId={activeChat.roomId}
+          peerProfile={activeChat.peerProfile}
+          chatKey={activeChat.chatKey}
+          myPublicKey={activeChat.myPublicKey}
+          peerPublicKey={activeChat.peerPublicKey}
+          safetyCode={activeChat.safetyCode}
+          onClose={handleCloseChat}
+        />
+      )}
+    </main>
+  );
+}

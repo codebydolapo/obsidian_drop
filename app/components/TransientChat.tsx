@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { motion } from 'framer-motion';
-import { Profile } from '../identity';
+import { Profile } from '../chat/helpers/identity';
 import { decryptMessage, encryptMessage, EncryptedPayload } from '../lib/crypto';
 import { hasSeenHint, markHintSeen } from '../lib/hints';
 import { Lock, Send, ShieldAlert, ShieldCheck, X } from 'lucide-react';
@@ -214,11 +214,10 @@ export function TransientChat({
               className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
-                  isMe
-                    ? 'bg-accent text-on-accent font-medium rounded-br-none'
-                    : 'bg-raised text-ink rounded-bl-none border border-line-strong/50'
-                }`}
+                className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${isMe
+                  ? 'bg-accent text-on-accent font-medium rounded-br-none'
+                  : 'bg-raised text-ink rounded-bl-none border border-line-strong/50'
+                  }`}
               >
                 {msg.undecryptable ? <em className="opacity-70">Couldn&apos;t decrypt this message</em> : msg.text}
               </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Profile } from '../identity';
+import { Profile } from '../chat/helpers/identity';
 import { Check, X } from 'lucide-react';
 
 interface HandshakeModalProps {

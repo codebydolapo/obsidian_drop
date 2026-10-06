@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-   "dev": "concurrently -k -p \"[{name}]\" -c \"cyan.bold,emerald.bold\" -n \"NEXT,SOCKET\" \"next dev\" \"node socket/server.js\"",
+    "dev": "concurrently -k -p \"[{name}]\" -c \"cyan.bold,emerald.bold\" -n \"NEXT,SOCKET\" \"next dev\" \"node socket/server.js\"",
     "server": "node socket/server.js",
     "build": "next build",
     "start": "next start",

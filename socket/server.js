@@ -1,14 +1,19 @@
 // server.js (Node.js + Socket.io)
 const express = require('express');
 const http = require('http');
+const net = require('net');
 const { Server } = require('socket.io');
 
 const PORT = Number(process.env.PORT) || 4000;
 const IS_PROD = process.env.NODE_ENV === 'production';
 // Comma-separated list of allowed frontend origins, e.g. "https://drop.example.com"
 const CORS_ORIGINS = process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean);
-// Only read x-forwarded-for when running behind a reverse proxy you control
-const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
+// Header your host's proxy puts the real client IP in, e.g. "x-forwarded-for".
+// Leave unset when clients connect directly; never set it without a proxy in front,
+// or clients can pick their own IP and join any network's radar.
+const CLIENT_IP_HEADER = process.env.CLIENT_IP_HEADER?.trim().toLowerCase() || null;
+// Which entry of a comma-separated header to use: "first" or "last" (default)
+const CLIENT_IP_POSITION = process.env.CLIENT_IP_POSITION === 'first' ? 'first' : 'last';
 
 const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS) || 30_000;
 // Messages are end-to-end encrypted, so only the ciphertext size can be checked.
@@ -100,14 +105,43 @@ function createRateLimiter() {
 
 // --- Helpers -------------------------------------------------------------------
 
-function getClientIp(socket) {
-  const forwarded = socket.handshake.headers['x-forwarded-for'];
-  if (TRUST_PROXY && typeof forwarded === 'string') {
-    // The proxy appends the address it saw, so the last entry is the one it vouches for
-    const hops = forwarded.split(',').map((ip) => ip.trim()).filter(Boolean);
-    if (hops.length) return hops[hops.length - 1];
+function getClientIp(headers, remoteAddress) {
+  const raw = CLIENT_IP_HEADER ? headers[CLIENT_IP_HEADER] : undefined;
+  if (typeof raw === 'string') {
+    const hops = raw.split(',').map((ip) => ip.trim()).filter(Boolean);
+    if (hops.length) return CLIENT_IP_POSITION === 'first' ? hops[0] : hops[hops.length - 1];
   }
-  return socket.handshake.address;
+  return remoteAddress || 'unknown';
+}
+
+// Expands "2001:db8::1" to its 8 hextets
+function expandIPv6(address) {
+  const [head, tail = ''] = address.split('::');
+  const toGroups = (part) => {
+    if (!part) return [];
+    return part.split(':').flatMap((group) => {
+      // Embedded IPv4 at the end, e.g. "::ffff:1.2.3.4"
+      if (group.includes('.')) {
+        const [a, b, c, d] = group.split('.').map(Number);
+        return [((a << 8) | b).toString(16), ((c << 8) | d).toString(16)];
+      }
+      return [group];
+    });
+  };
+  const headGroups = toGroups(head);
+  const tailGroups = toGroups(tail);
+  const missing = address.includes('::') ? 8 - headGroups.length - tailGroups.length : 0;
+  return [...headGroups, ...Array(missing).fill('0'), ...tailGroups].map((g) => parseInt(g, 16).toString(16));
+}
+
+// Key for "same network". IPv4 devices behind one router share an address, but
+// IPv6 gives each device its own, so group IPv6 by its /64 network prefix instead.
+function networkKey(ip) {
+  const address = ip.replace(/^\[|\]$/g, '').split('%')[0];
+  const mappedIPv4 = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mappedIPv4) return mappedIPv4[1];
+  if (net.isIPv6(address)) return `${expandIPv6(address).slice(0, 4).join(':')}::/64`;
+  return address;
 }
 
 function broadcastRadar(roomName) {
@@ -124,8 +158,17 @@ function clearRequest(key) {
 
 // --- Connection handling -------------------------------------------------------
 
+// Health check for the host's monitoring
+app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Shows which IP and network the server groups the caller under, to verify CLIENT_IP_HEADER after deploying
+app.get('/whoami', (req, res) => {
+  const ip = getClientIp(req.headers, req.socket.remoteAddress);
+  res.json({ ip, network: networkKey(ip) });
+});
+
 io.on('connection', (socket) => {
-  const networkRoom = `room_${getClientIp(socket)}`;
+  const networkRoom = `room_${networkKey(getClientIp(socket.handshake.headers, socket.handshake.address))}`;
   const allow = createRateLimiter();
 
   // Registers a handler that is rate limited and never crashes the server on bad input

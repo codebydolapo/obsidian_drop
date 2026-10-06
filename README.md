@@ -19,7 +19,7 @@ encrypt → send ─────send_message────────▶ relays c
 decrypt ◀──────────receive_message───────
 ```
 
-- **Discovery is by IP address.** The server puts every socket with the same public IP (the socket address, or `x-forwarded-for` when `TRUST_PROXY=true`) into one radar. In practice, "nearby" means "on the same Wi-Fi/NAT".
+- **Discovery is by IP address.** The server puts every socket from the same network into one radar. For IPv4 that means the same public IP; for IPv6 it means the same `/64` prefix, because each IPv6 device has its own address. In practice, "nearby" means "on the same Wi-Fi/NAT". Behind a hosting proxy, the IP comes from the header set in `CLIENT_IP_HEADER`.
 - **Venue codes** narrow that radar further. Typing a code like `stage1` (or opening `/?venue=stage1`) shows only people on the same network who entered the same code. This helps where hundreds of people share one IP, such as large public Wi-Fi or mobile networks. Codes are 1–16 characters (letters, digits, dashes), and case and a leading `#` are ignored. A code doesn't connect people on different networks.
 - **Identity** is created in the browser and saved in `localStorage` under `obsidian_profile` ([app/identity.ts](app/identity.ts)). There are no accounts.
 - **Chats are temporary.** Messages are kept in React state only. Closing the chat or reloading the page deletes them.
@@ -55,19 +55,12 @@ Stack: Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, framer-moti
 
 ## Running locally
 
-You need to run two processes: the socket server and the Next.js app.
-
 ```bash
-# 1. Install the dependencies the code uses but package.json doesn't list yet (see "Known gaps")
 npm install
-npm install nanoid
-
-# 2. Start the socket server (port 4000)
-node socket/server.js
-
-# 3. In another terminal, start the web app (port 3000)
-npm run dev
+npm run dev      # starts the web app (port 3000) and the socket server (port 4000) together
 ```
+
+To run them separately, use `npx next dev` and `npm run server`.
 
 Open http://localhost:3000 in two different browser profiles (or one normal and one incognito window), so each gets its own identity. Both run on the same machine, so they share an IP and appear on each other's radar.
 
@@ -78,8 +71,46 @@ Open http://localhost:3000 in two different browser profiles (or one normal and 
 | `NEXT_PUBLIC_SOCKET_URL` | `http://localhost:4000` | Web app: socket server address |
 | `PORT` | `4000` | Socket server: port to listen on |
 | `CORS_ORIGIN` | any origin (dev only) | Socket server: comma-separated allowed frontend origins. **Required** when `NODE_ENV=production`, or the server won't start |
-| `TRUST_PROXY` | `false` | Socket server: set to `true` only behind a reverse proxy you control, so the client IP is read from `x-forwarded-for` (last entry) |
+| `CLIENT_IP_HEADER` | unset (use the connection's address) | Socket server: header your host's proxy puts the client IP in, e.g. `x-forwarded-for`. **Only set this behind a proxy**, or clients can choose their own IP |
+| `CLIENT_IP_POSITION` | `last` | Socket server: which entry of a comma-separated `CLIENT_IP_HEADER` is the client: `first` or `last` |
 | `REQUEST_TIMEOUT_MS` | `30000` | Socket server: how long a chat request waits before expiring |
+
+The socket server also serves `GET /health` (for uptime checks) and `GET /whoami`. `/whoami` returns the IP and network the server assigns the caller to, which you use to check the client-IP settings after deploying.
+
+## Deploying (Vercel + Railway)
+
+Vercel can't keep WebSocket connections open, so the app is deployed in two parts: **Next.js on Vercel** and **the socket server on Railway**. Both use the same repo. [railway.json](railway.json) tells Railway to skip the Next.js build, run `npm run server`, and health-check `/health`.
+
+### 1. Socket server on Railway
+1. In Railway: **New Project → Deploy from GitHub repo** → pick this repo. Railway reads `railway.json`.
+2. **Settings → Networking → Generate Domain.** Note the URL, e.g. `https://obsidian-drop-socket.up.railway.app`.
+3. **Variables:**
+   ```
+   NODE_ENV=production
+   CORS_ORIGIN=https://<your-app>.vercel.app
+   CLIENT_IP_HEADER=x-forwarded-for
+   CLIENT_IP_POSITION=last
+   ```
+   `CORS_ORIGIN` can't be filled in until Vercel gives you a URL, and the server refuses to start in production without it. Put in a placeholder for now and fix it in step 3.
+   Don't set `PORT`: Railway provides it.
+4. Keep **one replica**. Radar and chat state live in the server's memory.
+
+### 2. Web app on Vercel
+1. **Add New → Project** → import the same repo. The defaults (Next.js, `npm run build`) are correct.
+2. **Environment Variables:** `NEXT_PUBLIC_SOCKET_URL=https://<your-railway-domain>`. The value is baked in at build time, so **redeploy** after changing it.
+3. Deploy, and note the URL.
+
+### 3. Connect and verify
+1. Set `CORS_ORIGIN` on Railway to the exact Vercel URL (no trailing slash). Add a custom domain the same way, comma-separated.
+2. **Check the client IP.** From a terminal:
+   ```bash
+   curl https://<railway-domain>/whoami
+   curl -H "X-Forwarded-For: 8.8.8.8" https://<railway-domain>/whoami
+   ```
+   - The first call should show **your** public IP (compare with https://ifconfig.me).
+   - The second must **not** show `8.8.8.8`. If it does, clients can fake their IP. Switch `CLIENT_IP_POSITION` (`last` ↔ `first`) and check again.
+   - If neither setting shows your IP, try `CLIENT_IP_HEADER=x-real-ip`.
+3. Open the Vercel URL on two phones on the same Wi-Fi. They should see each other, and chats should open with matching safety codes.
 
 ## Server protections
 
@@ -91,12 +122,9 @@ Open http://localhost:3000 in two different browser profiles (or one normal and 
 
 ## Known gaps
 
-### Dependencies
-- **`nanoid` isn't declared.** It only works because PostCSS happens to install it. If that dependency changes, it will break.
-
 ### Missing features
 - **Outgoing requests can't be cancelled.** They expire after 30 s.
-- **No way to start the server from npm.** There is no `npm run server` script and no way to run both processes with one command.
+- **Mobile-data users often can't find each other.** Phones on mobile data usually have different public IPs, and venue codes only group people on the same network.
 - **Some app details are still the defaults.** Page title/metadata in [app/layout.tsx](app/layout.tsx) still say "Create Next App", and `globals.css` still has the starter theme.
 
 ### Security and privacy

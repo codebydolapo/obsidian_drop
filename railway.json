@@ -1,0 +1,15 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "echo 'Socket server only: skipping next build (the web app is deployed on Vercel)'",
+    "watchPatterns": ["socket/**", "package.json", "package-lock.json", "railway.json"]
+  },
+  "deploy": {
+    "startCommand": "npm run server",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5
+  }
+}

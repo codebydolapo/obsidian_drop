@@ -6,8 +6,11 @@ import { getOrCreateProfile, Profile } from './identity';
 import { Radar } from './components/Radar';
 import { HandshakeModal } from './components/HandshakeModal';
 import { TransientChat } from './components/TransientChat';
+import { Onboarding } from './components/Onboarding';
 import { deriveChatKey, generateKeyPair, isCryptoAvailable, safetyCode } from './lib/crypto';
+import { hasSeenHint, markHintSeen } from './lib/hints';
 import { parseVenue, sanitizeVenueInput, setVenueInUrl } from './lib/venue';
+import { CircleHelp, Share2 } from 'lucide-react';
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 const NO_CRYPTO_NOTICE = 'Encrypted chat needs HTTPS (or localhost).';
@@ -22,7 +25,11 @@ export default function Home() {
   // Venue State
   const [venue, setVenue] = useState<string | null>(null);
   const [venueInput, setVenueInput] = useState('');
+  const [showVenueHint, setShowVenueHint] = useState(false);
   const venueRef = useRef<string | null>(null); // read by the reconnect handler
+
+  // First-visit intro; the page renders nothing until mounted, so reading storage here is safe
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenHint('onboarding'));
 
   // Handshake State
   const [incomingRequest, setIncomingRequest] = useState<{
@@ -138,6 +145,30 @@ export default function Home() {
     if (socket && profile) socket.emit('join_radar', { ...profile, venue: next });
   };
 
+  const finishOnboarding = () => {
+    markHintSeen('onboarding');
+    setShowOnboarding(false);
+  };
+
+  // Share sheet on phones, clipboard elsewhere. The link keeps the venue code.
+  const handleInvite = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Obsidian Drop', text: 'Chat with me on Obsidian Drop', url });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return; // user closed the sheet
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setNotice('Invite link copied');
+    } catch {
+      setNotice(`Share this link: ${url}`);
+    }
+  };
+
   const handleVenueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const next = parseVenue(venueInput);
@@ -201,23 +232,50 @@ export default function Home() {
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
           <span className="font-mono text-xs uppercase tracking-widest text-emerald-400">Obsidian Drop</span>
         </div>
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1">
-          <span className="text-base">{profile.avatar}</span>
-          <span className="text-xs font-mono text-slate-300">{profile.name}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowOnboarding(true)}
+            aria-label="How it works"
+            className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+          >
+            <CircleHelp className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1">
+            <span className="text-base">{profile.avatar}</span>
+            <span className="text-xs font-mono text-slate-300">{profile.name}</span>
+          </div>
         </div>
       </header>
 
       {/* Center Radar Screen */}
       <div className="flex flex-col items-center justify-center flex-1 my-8">
         <Radar peers={peers} onSelectPeer={handleSelectPeer} />
-        <p className="mt-6 text-xs font-mono text-slate-500">
-          {notice ??
-            (outgoingRequest
-              ? `Waiting for ${outgoingRequest.name} to accept...`
-              : peers.length === 0
-                ? `Scanning for peers ${where}...`
-                : `${peers.length} active peer(s) ${where}`)}
-        </p>
+
+        {notice || outgoingRequest || peers.length > 0 ? (
+          <p className="mt-6 text-xs font-mono text-slate-500" role="status">
+            {notice ??
+              (outgoingRequest
+                ? `Waiting for ${outgoingRequest.name} to accept...`
+                : `${peers.length} active peer(s) ${where}. Tap one to chat.`)}
+          </p>
+        ) : (
+          // Empty radar: explain who shows up here and offer a way to bring them in
+          <div className="mt-6 flex max-w-xs flex-col items-center text-center">
+            <p className="text-sm text-slate-300">Nobody nearby yet</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {venue
+                ? `People on this network who enter #${venue} will appear here.`
+                : 'People on the same Wi-Fi who open Obsidian Drop will appear here.'}
+            </p>
+            <button
+              onClick={handleInvite}
+              className="mt-3 flex items-center gap-1.5 rounded-full border border-slate-700 px-4 py-2 text-xs text-slate-300 transition hover:border-emerald-500/50 hover:text-emerald-300"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Invite someone nearby
+            </button>
+          </div>
+        )}
 
         {/* Venue code: narrows the radar when many people share one network */}
         {venue ? (
@@ -233,7 +291,16 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleVenueSubmit} className="mt-4 flex items-center gap-2">
+          <form onSubmit={handleVenueSubmit} className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowVenueHint((shown) => !shown)}
+              aria-label="What is a venue code?"
+              aria-expanded={showVenueHint}
+              className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+            >
+              <CircleHelp className="h-4 w-4" />
+            </button>
             <input
               type="text"
               value={venueInput}
@@ -249,9 +316,18 @@ export default function Home() {
             >
               Join
             </button>
+            {showVenueHint && (
+              <p className="w-full max-w-xs text-center text-[11px] text-slate-500">
+                Lots of people on this network? Pick a code like <span className="font-mono text-slate-300">stage1</span> and
+                share it. Only people here who enter the same code will see each other.
+              </p>
+            )}
           </form>
         )}
       </div>
+
+      {/* First-visit intro, reopened from the ? button */}
+      <Onboarding open={showOnboarding} onDone={finishOnboarding} />
 
       {/* Handshake Request Modal */}
       <HandshakeModal

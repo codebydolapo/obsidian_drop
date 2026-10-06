@@ -31,7 +31,7 @@ Implemented in [app/lib/crypto.ts](app/lib/crypto.ts) with the browser's Web Cry
 - Each side creates a new ECDH P-256 key pair **for each chat**. Only the public keys pass through the server, attached to the request and the accept. Private keys never leave the browser and can't be exported.
 - Both sides derive the same AES-256-GCM key (ECDH → HKDF-SHA-256). Every message gets a random 12-byte IV.
 - The sender's public key is bound to each message as authenticated data. If the server relabels one person's message as coming from the other, it fails to decrypt.
-- **Safety code:** tapping "End-to-end encrypted" in the chat header shows a 20-digit code computed from both public keys. If it matches on both phones, the server didn't swap the keys (a man-in-the-middle attack). People using the app are physically near each other, so comparing codes in person is easy.
+- **Safety code:** every chat opens with a 20-digit code computed from both public keys, plus "They match" / "They don't match" buttons. The header shows whether the chat is verified. "They don't match" turns sending off. If it matches on both phones, the server didn't swap the keys (a man-in-the-middle attack). People using the app are physically near each other, so comparing codes in person is easy.
 - The server only checks that messages are well-formed base64 within a size limit. It never sees the text.
 
 **Web Crypto only works on HTTPS or `localhost`.** If you open the app over plain HTTP on another device (for example `http://192.168.1.5:3000` on a phone), it shows "Encrypted chat needs HTTPS" and won't start chats. To test on phones, serve both the app and the socket server over HTTPS. Two ways: a tunnel such as `cloudflared` or `ngrok`, or `next dev --experimental-https` plus TLS on the socket server.
@@ -47,6 +47,8 @@ Implemented in [app/lib/crypto.ts](app/lib/crypto.ts) with the browser's Web Cry
 | [app/components/TransientChat.tsx](app/components/TransientChat.tsx) | Full-screen chat: encrypts, decrypts, shows the safety code |
 | [app/lib/crypto.ts](app/lib/crypto.ts) | Key exchange, message encryption and safety codes |
 | [app/lib/venue.ts](app/lib/venue.ts) | Venue code checks and the `?venue=` URL parameter |
+| [app/components/Onboarding.tsx](app/components/Onboarding.tsx) | Three-step intro on the first visit, reopened from the ? button |
+| [app/lib/hints.ts](app/lib/hints.ts) | Remembers which one-time hints (intro, close warning) this browser has seen |
 | [socket/server.js](socket/server.js) | Express + Socket.IO server: discovery and message relay (port 4000) |
 
 Stack: Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, framer-motion, lucide-react, socket.io-client.
@@ -98,7 +100,7 @@ Open http://localhost:3000 in two different browser profiles (or one normal and 
 - **Some app details are still the defaults.** Page title/metadata in [app/layout.tsx](app/layout.tsx) still say "Create Next App", and `globals.css` still has the starter theme.
 
 ### Security and privacy
-- **The safety code is only useful if people compare it.** Nothing prompts them to. Until they check, a malicious server could swap keys unnoticed.
+- **The safety code is only useful if people compare it.** Every chat asks them to, but it's optional. Someone who taps "They match" without checking gets no protection against a server that swaps keys.
 - **The server can see metadata.** It can't read messages, but it knows who chats with whom, when, and roughly how long each message is.
 - **No replay protection.** A malicious server could re-deliver an earlier ciphertext in the same chat, and it would decrypt as a duplicate message.
 - **Rate limits are per connection.** A client that keeps reconnecting gets a fresh limit each time. Per-IP limits would close this.

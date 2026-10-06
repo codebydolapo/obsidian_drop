@@ -11,9 +11,8 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { deriveChatKey, generateKeyPair, isCryptoAvailable, safetyCode } from '../lib/crypto';
 import { hasSeenHint, markHintSeen } from '../lib/hints';
 import { parseVenue, sanitizeVenueInput, setVenueInUrl } from '../lib/venue';
+import { SOCKET_SERVER_URL } from '../lib/config';
 import { CircleHelp, Share2 } from 'lucide-react';
-
-const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 const NO_CRYPTO_NOTICE = 'Encrypted chat needs HTTPS (or localhost).';
 
 type Peer = { socketId: string; name: string; avatar: string };

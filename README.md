@@ -40,8 +40,10 @@ Implemented in [app/lib/crypto.ts](app/lib/crypto.ts) with the browser's Web Cry
 
 | Path | Purpose |
 | --- | --- |
-| [app/page.tsx](app/page.tsx) | Main screen: connects to the socket, holds peer, request and chat state |
-| [app/identity.ts](app/identity.ts) | Creates the random name and avatar and saves them |
+| [app/page.tsx](app/page.tsx) | Landing page (`/`): what the app is, how it works, security, use cases, FAQ |
+| [app/components/landing/](app/components/landing/) | Landing page pieces. **All copy lives in `content.ts`.** Testimonials marked `sample: true` only show in development; add real ones (with permission) to show them in production |
+| [app/chat/page.tsx](app/chat/page.tsx) | The app itself (`/chat`): connects to the socket, holds peer, request and chat state |
+| [app/chat/helpers/identity.ts](app/chat/helpers/identity.ts) | Creates the random name and avatar and saves them |
 | [app/components/Radar.tsx](app/components/Radar.tsx) | Animated radar showing peers in a circle |
 | [app/components/HandshakeModal.tsx](app/components/HandshakeModal.tsx) | Accept/decline popup for an incoming request |
 | [app/components/TransientChat.tsx](app/components/TransientChat.tsx) | Full-screen chat: encrypts, decrypts, shows the safety code |
@@ -77,7 +79,7 @@ Open http://localhost:3000 in two different browser profiles (or one normal and 
 | `CLIENT_IP_POSITION` | `last` | Socket server: which entry of a comma-separated `CLIENT_IP_HEADER` is the client: `first` or `last` |
 | `REQUEST_TIMEOUT_MS` | `30000` | Socket server: how long a chat request waits before expiring |
 
-The socket server also serves `GET /health` (for uptime checks) and `GET /whoami`. `/whoami` returns the IP and network the server assigns the caller to, which you use to check the client-IP settings after deploying.
+The socket server also serves `GET /health` (for uptime checks), `GET /stats` (the number of people on a radar right now, shown live on the landing page; it only returns a total), and `GET /whoami`. `/whoami` returns the IP and network the server assigns the caller to, which you use to check the client-IP settings after deploying.
 
 ## Deploying (Vercel + Railway)
 

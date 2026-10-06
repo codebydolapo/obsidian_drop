@@ -1,33 +1,33 @@
 'use client';
 
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { applyTheme, readStoredTheme, saveTheme, Theme } from '../lib/theme';
+import { applyTheme, readStoredTheme, saveTheme } from '../lib/theme';
 
+// Server-rendered on the landing page, where the saved theme isn't known yet. So the
+// icon is picked by CSS from <html data-theme> (set by the inline script in layout.tsx)
+// instead of React state, and the markup is identical on server and client.
 export function ThemeToggle() {
-  // Rendered only after the page mounts, so reading storage here is safe
-  const [theme, setTheme] = useState<Theme>(readStoredTheme);
-  const next: Theme = theme === 'dark' ? 'light' : 'dark';
-
-  // Keeps <html data-theme> in sync. The inline script in layout.tsx handles first paint;
-  // this re-applies it after React's development remount clears the attribute.
+  // Re-applies the saved theme after React's development remount clears the attribute
   useLayoutEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(readStoredTheme());
+  }, []);
 
   const toggle = () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
     saveTheme(next);
-    setTheme(next);
   };
 
   return (
     <button
       onClick={toggle}
-      aria-label={`Switch to ${next} mode`}
-      title={`Switch to ${next} mode`}
+      aria-label="Toggle dark mode"
+      title="Toggle dark mode"
       className="rounded-full p-1.5 text-muted transition hover:bg-raised hover:text-ink"
     >
-      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      <Moon className="h-4 w-4 dark:hidden" />
+      <Sun className="hidden h-4 w-4 dark:block" />
     </button>
   );
 }

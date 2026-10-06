@@ -161,6 +161,17 @@ function clearRequest(key) {
 // Health check for the host's monitoring
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Live count for the landing page. Only a total, never who or where.
+app.get('/stats', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && (!CORS_ORIGINS?.length || CORS_ORIGINS.includes(origin))) {
+    res.set('Access-Control-Allow-Origin', origin);
+    res.set('Vary', 'Origin');
+  }
+  res.set('Cache-Control', 'no-store');
+  res.json({ online: activePeers.size });
+});
+
 // Shows which IP and network the server groups the caller under, to verify CLIENT_IP_HEADER after deploying
 app.get('/whoami', (req, res) => {
   const ip = getClientIp(req.headers, req.socket.remoteAddress);

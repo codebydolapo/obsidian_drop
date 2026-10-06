@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
+/*
+ * Color tokens. Light is the default; <html data-theme="dark"> switches to dark.
+ * Components use these (bg-canvas, text-ink, bg-accent, ...) instead of raw palette
+ * colors, so both themes come from one set of classes.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --canvas: #f8fafc;        /* page background */
+  --surface: #ffffff;       /* cards, modals, header bars */
+  --raised: #f1f5f9;        /* avatars, secondary buttons, hover backgrounds */
+  --line: #e2e8f0;          /* default borders */
+  --line-strong: #cbd5e1;   /* emphasized borders */
+  --ink: #0f172a;           /* primary text */
+  --soft: #334155;          /* secondary text */
+  --subtle: #475569;        /* tertiary text */
+  --muted: #64748b;         /* hints, timestamps, placeholders */
+  --accent: #10b981;        /* primary buttons, own message bubbles */
+  --accent-hover: #059669;
+  --accent-ink: #047857;    /* green text on the page background */
+  --on-accent: #022c22;     /* text on accent backgrounds */
+  --danger: #e11d48;
+  --danger-hover: #be123c;
+  --danger-ink: #be123c;
+  --on-danger: #ffffff;
+  --scrim: rgb(15 23 42 / 0.35); /* backdrop behind modals */
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #020617;
+  --surface: #0f172a;
+  --raised: #1e293b;
+  --line: #1e293b;
+  --line-strong: #334155;
+  --ink: #f1f5f9;
+  --soft: #cbd5e1;
+  --subtle: #94a3b8;
+  --muted: #64748b;
+  --accent: #10b981;
+  --accent-hover: #34d399;
+  --accent-ink: #34d399;
+  --on-accent: #020617;
+  --danger: #f43f5e;
+  --danger-hover: #fb7185;
+  --danger-ink: #fda4af;
+  --on-danger: #ffffff;
+  --scrim: rgb(0 0 0 / 0.6);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-soft: var(--soft);
+  --color-subtle: var(--subtle);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-ink: var(--danger-ink);
+  --color-on-danger: var(--on-danger);
+  --color-scrim: var(--scrim);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--canvas);
+  color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
 }

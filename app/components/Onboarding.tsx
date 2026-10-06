@@ -35,7 +35,7 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 backdrop-blur-sm">
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -43,22 +43,22 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-slate-900 p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded-2xl border border-accent/30 bg-surface p-6 text-center shadow-2xl"
           >
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/40">
-              <Icon className="h-6 w-6 text-emerald-400" />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 ring-1 ring-accent/40">
+              <Icon className="h-6 w-6 text-accent-ink" />
             </div>
-            <h2 id="onboarding-title" className="mt-4 text-lg font-semibold text-slate-100">
+            <h2 id="onboarding-title" className="mt-4 text-lg font-semibold text-ink">
               {title}
             </h2>
-            <p className="mt-2 min-h-[3.75rem] text-sm text-slate-400">{body}</p>
+            <p className="mt-2 min-h-[3.75rem] text-sm text-subtle">{body}</p>
 
             {/* Progress dots */}
             <div className="mt-5 flex justify-center gap-1.5" aria-hidden="true">
               {STEPS.map((_, i) => (
                 <span
                   key={i}
-                  className={`h-1.5 rounded-full transition-all ${i === step ? 'w-5 bg-emerald-400' : 'w-1.5 bg-slate-700'}`}
+                  className={`h-1.5 rounded-full transition-all ${i === step ? 'w-5 bg-accent' : 'w-1.5 bg-line-strong'}`}
                 />
               ))}
             </div>
@@ -66,13 +66,13 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
             <div className="mt-6 flex gap-3">
               <button
                 onClick={step === 0 ? finish : () => setStep(step - 1)}
-                className="flex-1 rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+                className="flex-1 rounded-xl border border-line-strong px-4 py-3 text-sm font-medium text-soft transition hover:bg-raised"
               >
                 {step === 0 ? 'Skip' : 'Back'}
               </button>
               <button
                 onClick={isLast ? finish : () => setStep(step + 1)}
-                className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-emerald-400"
+                className="flex-1 rounded-xl bg-accent px-4 py-3 text-sm font-medium text-on-accent transition hover:bg-accent-hover"
               >
                 {isLast ? 'Get started' : 'Next'}
               </button>

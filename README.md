@@ -49,6 +49,8 @@ Implemented in [app/lib/crypto.ts](app/lib/crypto.ts) with the browser's Web Cry
 | [app/lib/venue.ts](app/lib/venue.ts) | Venue code checks and the `?venue=` URL parameter |
 | [app/components/Onboarding.tsx](app/components/Onboarding.tsx) | Three-step intro on the first visit, reopened from the ? button |
 | [app/lib/hints.ts](app/lib/hints.ts) | Remembers which one-time hints (intro, close warning) this browser has seen |
+| [app/globals.css](app/globals.css) | Color tokens for light (default) and dark themes. Components use these (`bg-canvas`, `text-ink`, `bg-accent`, …) rather than raw Tailwind colors |
+| [app/lib/theme.ts](app/lib/theme.ts), [app/components/ThemeToggle.tsx](app/components/ThemeToggle.tsx) | Light/dark switch in the header. The choice is saved per browser and applied before the first paint |
 | [socket/server.js](socket/server.js) | Express + Socket.IO server: discovery and message relay (port 4000) |
 
 Stack: Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, framer-motion, lucide-react, socket.io-client.

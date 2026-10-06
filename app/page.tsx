@@ -7,6 +7,7 @@ import { Radar } from './components/Radar';
 import { HandshakeModal } from './components/HandshakeModal';
 import { TransientChat } from './components/TransientChat';
 import { Onboarding } from './components/Onboarding';
+import { ThemeToggle } from './components/ThemeToggle';
 import { deriveChatKey, generateKeyPair, isCryptoAvailable, safetyCode } from './lib/crypto';
 import { hasSeenHint, markHintSeen } from './lib/hints';
 import { parseVenue, sanitizeVenueInput, setVenueInUrl } from './lib/venue';
@@ -225,24 +226,25 @@ export default function Home() {
   const where = venue ? `in #${venue}` : 'on your network';
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between bg-slate-950 p-6 text-slate-100 overflow-hidden">
+    <main className="relative flex min-h-screen flex-col items-center justify-between bg-canvas p-6 text-ink overflow-hidden">
       {/* Header Badge */}
-      <header className="z-10 flex items-center justify-between w-full max-w-md border-b border-slate-800 pb-4">
+      <header className="z-10 flex items-center justify-between w-full max-w-md border-b border-line pb-4">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-          <span className="font-mono text-xs uppercase tracking-widest text-emerald-400">Obsidian Drop</span>
+          <div className="h-2 w-2 rounded-full bg-accent animate-ping" />
+          <span className="font-mono text-xs uppercase tracking-widest text-accent-ink">Obsidian Drop</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
           <button
             onClick={() => setShowOnboarding(true)}
             aria-label="How it works"
-            className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+            className="rounded-full p-1.5 text-muted transition hover:bg-raised hover:text-ink"
           >
             <CircleHelp className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-3 py-1">
+          <div className="ml-1 flex items-center gap-2 bg-surface border border-line rounded-full px-3 py-1">
             <span className="text-base">{profile.avatar}</span>
-            <span className="text-xs font-mono text-slate-300">{profile.name}</span>
+            <span className="text-xs font-mono text-soft">{profile.name}</span>
           </div>
         </div>
       </header>
@@ -252,7 +254,7 @@ export default function Home() {
         <Radar peers={peers} onSelectPeer={handleSelectPeer} />
 
         {notice || outgoingRequest || peers.length > 0 ? (
-          <p className="mt-6 text-xs font-mono text-slate-500" role="status">
+          <p className="mt-6 text-xs font-mono text-muted" role="status">
             {notice ??
               (outgoingRequest
                 ? `Waiting for ${outgoingRequest.name} to accept...`
@@ -261,15 +263,15 @@ export default function Home() {
         ) : (
           // Empty radar: explain who shows up here and offer a way to bring them in
           <div className="mt-6 flex max-w-xs flex-col items-center text-center">
-            <p className="text-sm text-slate-300">Nobody nearby yet</p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="text-sm text-soft">Nobody nearby yet</p>
+            <p className="mt-1 text-xs text-muted">
               {venue
                 ? `People on this network who enter #${venue} will appear here.`
                 : 'People on the same Wi-Fi who open Obsidian Drop will appear here.'}
             </p>
             <button
               onClick={handleInvite}
-              className="mt-3 flex items-center gap-1.5 rounded-full border border-slate-700 px-4 py-2 text-xs text-slate-300 transition hover:border-emerald-500/50 hover:text-emerald-300"
+              className="mt-3 flex items-center gap-1.5 rounded-full border border-line-strong px-4 py-2 text-xs text-soft transition hover:border-accent/50 hover:text-accent-ink"
             >
               <Share2 className="h-3.5 w-3.5" />
               Invite someone nearby
@@ -280,12 +282,12 @@ export default function Home() {
         {/* Venue code: narrows the radar when many people share one network */}
         {venue ? (
           <div className="mt-4 flex items-center gap-2 font-mono text-xs">
-            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+            <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-accent-ink">
               #{venue}
             </span>
             <button
               onClick={() => applyVenue(null)}
-              className="rounded-full px-3 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
+              className="rounded-full px-3 py-1 text-subtle hover:bg-raised hover:text-ink transition"
             >
               Leave venue
             </button>
@@ -297,7 +299,7 @@ export default function Home() {
               onClick={() => setShowVenueHint((shown) => !shown)}
               aria-label="What is a venue code?"
               aria-expanded={showVenueHint}
-              className="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+              className="rounded-full p-1.5 text-muted transition hover:bg-raised hover:text-ink"
             >
               <CircleHelp className="h-4 w-4" />
             </button>
@@ -307,18 +309,18 @@ export default function Home() {
               onChange={(e) => setVenueInput(sanitizeVenueInput(e.target.value))}
               placeholder="Venue code (optional)"
               aria-label="Venue code"
-              className="w-44 rounded-full border border-slate-800 bg-slate-900 px-4 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              className="w-44 rounded-full border border-line bg-surface px-4 py-2 font-mono text-xs text-ink placeholder-muted focus:border-accent focus:outline-none"
             />
             <button
               type="submit"
               disabled={!venueInput}
-              className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-medium text-slate-950 transition hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500"
+              className="rounded-full bg-accent px-4 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-hover disabled:opacity-40 disabled:hover:bg-accent"
             >
               Join
             </button>
             {showVenueHint && (
-              <p className="w-full max-w-xs text-center text-[11px] text-slate-500">
-                Lots of people on this network? Pick a code like <span className="font-mono text-slate-300">stage1</span> and
+              <p className="w-full max-w-xs text-center text-[11px] text-muted">
+                Lots of people on this network? Pick a code like <span className="font-mono text-soft">stage1</span> and
                 share it. Only people here who enter the same code will see each other.
               </p>
             )}

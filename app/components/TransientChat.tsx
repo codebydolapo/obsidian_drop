@@ -114,9 +114,9 @@ export function TransientChat({
   };
 
   const headerStatus = {
-    unchecked: { icon: Lock, text: 'Encrypted • Tap to verify', className: 'text-slate-400 hover:text-slate-200' },
-    match: { icon: ShieldCheck, text: 'Encrypted • Verified', className: 'text-emerald-400 hover:text-emerald-300' },
-    mismatch: { icon: ShieldAlert, text: 'Codes did not match', className: 'text-rose-400 hover:text-rose-300' },
+    unchecked: { icon: Lock, text: 'Encrypted • Tap to verify', className: 'text-subtle hover:text-ink' },
+    match: { icon: ShieldCheck, text: 'Encrypted • Verified', className: 'text-accent-ink hover:text-accent-ink' },
+    mismatch: { icon: ShieldAlert, text: 'Codes did not match', className: 'text-danger-ink hover:text-danger-ink' },
   }[verification];
   const StatusIcon = headerStatus.icon;
 
@@ -126,16 +126,16 @@ export function TransientChat({
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-40 flex flex-col bg-slate-950 text-slate-100"
+      className="fixed inset-0 z-40 flex flex-col bg-canvas text-ink"
     >
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 py-3 backdrop-blur-md">
+      <header className="flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-xl border border-slate-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-raised text-xl border border-line-strong">
             {peerProfile.avatar}
           </div>
           <div>
-            <h2 className="font-semibold text-sm text-slate-100">{peerProfile.name}</h2>
+            <h2 className="font-semibold text-sm text-ink">{peerProfile.name}</h2>
             <button
               type="button"
               onClick={() => safetyCardRef.current?.scrollIntoView({ behavior: 'smooth' })}
@@ -150,7 +150,7 @@ export function TransientChat({
         <button
           onClick={handleCloseClick}
           aria-label="Close chat"
-          className="rounded-full p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
+          className="rounded-full p-2 text-subtle hover:bg-raised hover:text-ink transition"
         >
           <X className="h-5 w-5" />
         </button>
@@ -161,44 +161,44 @@ export function TransientChat({
         {/* Safety code: matching codes on both screens mean nobody intercepted the keys */}
         <div ref={safetyCardRef} className="mx-auto max-w-sm">
           {verification === 'unchecked' && (
-            <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center">
-              <Lock className="mx-auto h-5 w-5 text-emerald-400" />
-              <p className="mt-2 text-xs text-slate-300">
+            <div className="rounded-2xl border border-line-strong bg-surface p-4 text-center">
+              <Lock className="mx-auto h-5 w-5 text-accent-ink" />
+              <p className="mt-2 text-xs text-soft">
                 This chat is end-to-end encrypted. Check it&apos;s really {peerProfile.name}: compare this code with their screen.
               </p>
-              <p className="mt-3 font-mono text-lg tracking-widest text-emerald-300">{safetyCode}</p>
+              <p className="mt-3 font-mono text-lg tracking-widest text-accent-ink">{safetyCode}</p>
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => setVerification('mismatch')}
-                  className="flex-1 rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:bg-slate-800"
+                  className="flex-1 rounded-xl border border-line-strong px-3 py-2 text-xs text-soft transition hover:bg-raised"
                 >
                   They don&apos;t match
                 </button>
                 <button
                   onClick={() => setVerification('match')}
-                  className="flex-1 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-medium text-slate-950 transition hover:bg-emerald-400"
+                  className="flex-1 rounded-xl bg-accent px-3 py-2 text-xs font-medium text-on-accent transition hover:bg-accent-hover"
                 >
                   They match
                 </button>
               </div>
-              <p className="mt-3 text-[11px] text-slate-500">Messages aren&apos;t saved anywhere. Closing the chat ends it for both of you.</p>
+              <p className="mt-3 text-[11px] text-muted">Messages aren&apos;t saved anywhere. Closing the chat ends it for both of you.</p>
             </div>
           )}
           {verification === 'match' && (
-            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] font-mono text-emerald-400/80">
+            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] font-mono text-accent-ink/80">
               <ShieldCheck className="h-3 w-3" />
               You verified the safety code with {peerProfile.name}
             </p>
           )}
           {verification === 'mismatch' && (
-            <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-center">
-              <ShieldAlert className="mx-auto h-5 w-5 text-rose-400" />
-              <p className="mt-2 text-xs text-rose-200">
+            <div className="rounded-2xl border border-danger/40 bg-danger/10 p-4 text-center">
+              <ShieldAlert className="mx-auto h-5 w-5 text-danger-ink" />
+              <p className="mt-2 text-xs text-danger-ink">
                 The codes don&apos;t match. Someone may be intercepting this chat, so sending is turned off. Close it and try again.
               </p>
               <button
                 onClick={() => setVerification('unchecked')}
-                className="mt-3 text-[11px] text-slate-400 underline underline-offset-2 hover:text-slate-200"
+                className="mt-3 text-[11px] text-subtle underline underline-offset-2 hover:text-ink"
               >
                 I misread it, compare again
               </button>
@@ -216,13 +216,13 @@ export function TransientChat({
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
                   isMe
-                    ? 'bg-emerald-500 text-slate-950 font-medium rounded-br-none'
-                    : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/50'
+                    ? 'bg-accent text-on-accent font-medium rounded-br-none'
+                    : 'bg-raised text-ink rounded-bl-none border border-line-strong/50'
                 }`}
               >
                 {msg.undecryptable ? <em className="opacity-70">Couldn&apos;t decrypt this message</em> : msg.text}
               </div>
-              <span className="mt-1 text-[10px] text-slate-500 font-mono px-1">
+              <span className="mt-1 text-[10px] text-muted font-mono px-1">
                 {new Date(msg.timestamp).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -232,7 +232,7 @@ export function TransientChat({
           );
         })}
         {peerLeft && (
-          <p className="text-center text-xs font-mono text-slate-500 py-2">
+          <p className="text-center text-xs font-mono text-muted py-2">
             {peerProfile.name} left the chat
           </p>
         )}
@@ -240,7 +240,7 @@ export function TransientChat({
       </div>
 
       {/* Input Bar */}
-      <form onSubmit={sendMessage} className="border-t border-slate-800 bg-slate-900/50 p-3">
+      <form onSubmit={sendMessage} className="border-t border-line bg-surface/50 p-3">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -251,13 +251,13 @@ export function TransientChat({
             placeholder={
               peerLeft ? 'Chat ended' : verification === 'mismatch' ? 'Sending turned off' : `Message ${peerProfile.name}...`
             }
-            className="flex-1 rounded-full border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+            className="flex-1 rounded-full border border-line bg-canvas px-4 py-3 text-sm text-ink placeholder-muted focus:border-accent focus:outline-none disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || chatLocked}
             aria-label="Send"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-slate-950 transition hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-on-accent transition hover:bg-accent-hover disabled:opacity-40 disabled:hover:bg-accent"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -266,22 +266,22 @@ export function TransientChat({
 
       {/* One-time reminder that closing is permanent */}
       {confirmingClose && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center">
-            <h3 className="text-base font-semibold text-slate-100">End this chat?</h3>
-            <p className="mt-2 text-sm text-slate-400">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-scrim p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-line-strong bg-surface p-6 text-center">
+            <h3 className="text-base font-semibold text-ink">End this chat?</h3>
+            <p className="mt-2 text-sm text-subtle">
               Closing ends the chat for both of you. Messages aren&apos;t saved, so they can&apos;t be recovered.
             </p>
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setConfirmingClose(false)}
-                className="flex-1 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-700"
+                className="flex-1 rounded-xl border border-line-strong bg-raised/80 px-4 py-3 text-sm font-medium text-soft transition hover:bg-line-strong"
               >
                 Keep chatting
               </button>
               <button
                 onClick={confirmClose}
-                className="flex-1 rounded-xl bg-rose-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-400"
+                className="flex-1 rounded-xl bg-danger px-4 py-3 text-sm font-medium text-on-danger transition hover:bg-danger-hover"
               >
                 End chat
               </button>

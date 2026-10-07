@@ -40,7 +40,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-canvas text-ink">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/80 backdrop-blur-md">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6" aria-label="Main">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6" aria-label="Main">
           <Link href="/" className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-sm">📍</span>
             <span className="font-mono text-sm font-semibold uppercase tracking-widest text-ink">Obsidian Drop</span>
@@ -68,19 +68,19 @@ export default function LandingPage() {
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(ellipse_at_top,var(--color-accent)_0%,transparent_60%)] opacity-[0.12]" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-6 pb-24 pt-16 lg:grid-cols-2 lg:pt-24">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-6 pb-24 pt-16 lg:grid-cols-2 lg:pt-24">
             <div className="text-center lg:text-left">
-              <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-mono text-xs text-accent-ink">
+              {/* <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-mono text-xs text-accent-ink">
                 <Lock className="h-3 w-3" />
                 End-to-end encrypted · No sign-up
-              </span>
+              </span> */}
               <h1 className="mt-6 text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-6xl">
                 Talk to the people in the room. <span className="text-accent-ink">Leave no trace.</span>
               </h1>
-              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-subtle lg:mx-0">
+              {/* <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-subtle lg:mx-0">
                 Obsidian Drop shows you who&apos;s on your Wi-Fi and lets you start a private, encrypted chat in one tap.
                 No accounts, no phone numbers, no history. Close the chat and it&apos;s gone.
-              </p>
+              </p> */}
               <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
                 <PrimaryCta>Start chatting nearby</PrimaryCta>
                 <a href="#how-it-works" className="inline-flex items-center gap-1 text-sm font-medium text-soft transition hover:text-ink">

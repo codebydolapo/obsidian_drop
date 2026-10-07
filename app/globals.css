@@ -71,12 +71,12 @@
   --color-danger-ink: var(--danger-ink);
   --color-on-danger: var(--on-danger);
   --color-scrim: var(--scrim);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--canvas);
   color: var(--ink);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
